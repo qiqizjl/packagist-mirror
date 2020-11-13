@@ -175,5 +175,6 @@ func deletePackageV2(JobMap map[string]string, name string, num int) {
 	path := "p2/" + packageName + ".json"
 
 	hDel(packageV2Set, packageName)
+	hDel(packageV2SetUpdateTime, packageName)
 	deleteObject(getProcessName(name, num), path)
 }
