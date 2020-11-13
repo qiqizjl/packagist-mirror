@@ -50,6 +50,26 @@ func cdnCache(url string, name string, num int) {
 	resp.Body.Close()
 }
 
+func getJSONWithHeader(url string, header http.Header, processName string) (*http.Response, error) {
+	client := http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	header.Add("User-Agent", config.UserAgent)
+	header.Add("Content-Encoding", "gzip")
+	header.Add("Accept-Encoding", "gzip")
+	req.Header = header
+	resp, err := client.Do(req)
+
+	if err != nil {
+		fmt.Println(processName, "Get Error", err.Error())
+	} else if resp.StatusCode != 200 {
+		fmt.Println(processName, "Get Error", resp.StatusCode, url)
+	}
+	return resp, err
+}
+
 func getJSON(url string, processName string) (*http.Response, error) {
 	client := http.Client{}
 	req, err := http.NewRequest("GET", url, nil)

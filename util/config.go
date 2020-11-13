@@ -16,18 +16,21 @@ const (
 	packagesNoData  = "set:packages-nodata"
 	distsNoMetaKey  = "set:dists-meta-missing"
 
-	distSet          = "set:dists"
-	providerSet      = "set:providers"
-	packageV1Set     = "set:packagesV1"
-	packageV1SetHash = "set:packagesV1-Hash"
-	packageV2Set     = "set:packagesV2"
-	versionsSet      = "set:versions"
+	distSet                = "set:dists"
+	providerSet            = "set:providers"
+	packageV1Set           = "set:packagesV1"
+	packageV1SetHash       = "set:packagesV1-Hash"
+	packageV2Set           = "set:packagesV2"
+	packageV2SetUpdateTime = "set:packagesV2:updateTime"
+
+	versionsSet = "set:versions"
 
 	distQueue      = "queue:dists"
 	distQueueRetry = "queue:dists-Retry"
 	providerQueue  = "queue:providers"
 	packageP1Queue = "queue:packagesV1"
 	packageV2Queue = "queue:packagesV2"
+	packageV2QueueRetry = "queue:packagesV2Retry"
 )
 
 var (

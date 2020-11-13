@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"io/ioutil"
+	"net/http"
 	"time"
 )
 
@@ -34,7 +35,7 @@ func packagesV2(name string, num int) {
 		}
 
 		if actionType == "update" {
-			updatePackageV2(JobMap, name, num)
+			updatePackageV2(JobMap, name, num,false)
 		}
 
 		if actionType == "delete" {
@@ -45,7 +46,43 @@ func packagesV2(name string, num int) {
 
 }
 
-func updatePackageV2(JobMap map[string]string, name string, num int) {
+func packagesV2Resty(name string, num int) {
+
+	for {
+		jobJson := sPop(packageV2QueueRetry)
+		if jobJson == "" {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// Json decode
+		JobMap := make(map[string]string)
+		err := json.Unmarshal([]byte(jobJson), &JobMap)
+		if err != nil {
+			fmt.Println(getProcessName(name, num), "JSON Decode Error:", jobJson)
+			sAdd(packageV2Set+"-json_decode_error", jobJson)
+			continue
+		}
+
+		actionType, ok := JobMap["type"]
+		if !ok {
+			fmt.Println(getProcessName(name, num), "package field not found: type")
+			continue
+		}
+		time.Sleep(5*time.Second)
+		if actionType == "update" {
+			updatePackageV2(JobMap, name, num,true)
+		}
+
+		if actionType == "delete" {
+			deletePackageV2(JobMap, name, num)
+		}
+
+	}
+
+}
+
+func updatePackageV2(JobMap map[string]string, name string, num int,isRetry bool) {
 	packageName, ok := JobMap["package"]
 	if !ok {
 		fmt.Println(getProcessName(name, num), "package field not found: package")
@@ -59,10 +96,23 @@ func updatePackageV2(JobMap map[string]string, name string, num int) {
 	}
 
 	path := "p2/" + packageName + ".json"
-	resp, err := packagistGet(path, getProcessName(name, num))
+	header := make(http.Header)
+	lastSyncTime := hGet(packageV2SetUpdateTime, packageName)
+	if lastSyncTime != "" {
+		header.Set("If-Modified-Since", lastSyncTime)
+	}
+	resp, err := getJSONWithHeader(packagistUrl(path),header, getProcessName(name, num))
+
 	if err != nil {
 		fmt.Println(getProcessName(name, num), path, err.Error())
 		makeFailed(packageV2Set, path, err)
+		return
+	}
+
+	// 如果是304 且不是重试的情况下 就重新投递
+	if resp.StatusCode == 304 && !isRetry{
+		jsonV2, _ := json.Marshal(JobMap)
+		sAdd(packageV2QueueRetry, string(jsonV2))
 		return
 	}
 
@@ -110,6 +160,7 @@ func updatePackageV2(JobMap map[string]string, name string, num int) {
 	}
 
 	hSet(packageV2Set, packageName, updateTime)
+	hSet(packageV2SetUpdateTime, packageName, resp.Header.Get("Last-Modified"))
 
 	cdnCache(path, name, num)
 }

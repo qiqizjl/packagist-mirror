@@ -43,4 +43,8 @@ func Execute() {
 		go distsRetry("DistsRetry", i)
 	}
 
+	for i := 0; i < 20; i++ {
+		go packagesV2Resty("SyncV2PackagesV2Retry", i)
+	}
+
 }
